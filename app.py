@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
 from collections import Counter
 
@@ -19,9 +19,9 @@ class CommitAnalyzeRequest(BaseModel):
 #  Response DTO 
 class CommitSummaryResponse(BaseModel):
     total: int
-    latest: datetime | None
+    latest: Optional[datetime]
     weekly: int
-    mostActiveDay: str | None
+    mostActiveDay: Optional[str]
 
 # 커밋 통계
 @app.post("/analyze/summary", response_model=CommitSummaryResponse)
