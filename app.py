@@ -51,3 +51,28 @@ def analyze_summary(req: CommitAnalyzeRequest):
         weekly=weekly,
         mostActiveDay=most_active_day
     )
+
+
+# Weekly Commit Analysis
+class WeeklyAnalyzeRequest(BaseModel):
+    projectId: int
+    commitDates: List[datetime]
+
+
+class WeeklyCommitCount(BaseModel):
+    weekday: int   # 1(Monday) ~ 7(Sunday)
+    count: int
+
+
+@app.post("/analyze/weekly", response_model=List[WeeklyCommitCount])
+def analyze_weekly(req: WeeklyAnalyzeRequest):
+    counter = Counter()
+
+    for d in req.commitDates:
+        counter[d.weekday() + 1] += 1
+
+    return [
+        # monday = 0
+        WeeklyCommitCount(weekday=k, count=v)
+        for k, v in sorted(counter.items())
+    ]
