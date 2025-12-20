@@ -23,7 +23,7 @@ class CommitSummaryResponse(BaseModel):
     weekly: int
     mostActiveDay: str | None
 
-
+# 커밋 통계
 @app.post("/analyze/summary", response_model=CommitSummaryResponse)
 def analyze_summary(req: CommitAnalyzeRequest):
     commits = req.commits
@@ -53,7 +53,7 @@ def analyze_summary(req: CommitAnalyzeRequest):
     )
 
 
-# Weekly Commit Analysis
+# 주간 커밋 
 class WeeklyAnalyzeRequest(BaseModel):
     projectId: int
     commitDates: List[datetime]
@@ -72,7 +72,37 @@ def analyze_weekly(req: WeeklyAnalyzeRequest):
         counter[d.weekday() + 1] += 1
 
     return [
-        # monday = 0
+        # monday = 1
         WeeklyCommitCount(weekday=k, count=v)
+        for k, v in sorted(counter.items())
+    ]
+
+# 6개월 커밋 히스토리 
+class HistoryAnalyzeRequest(BaseModel):
+    projectId: int
+    commitDates: List[datetime]
+
+
+class MonthlyCommitCount(BaseModel):
+    yearMonth: str   # e.g. "2025-09"
+    count: int
+
+
+@app.post("/analyze/history", response_model=List[MonthlyCommitCount])
+def analyze_history(req: HistoryAnalyzeRequest):
+    counter = Counter()
+
+    now = datetime.now()
+    six_months_ago = now - timedelta(days=180)
+
+    for d in req.commitDates:
+        if d < six_months_ago:
+            continue
+
+        key = d.strftime("%Y-%m")
+        counter[key] += 1
+
+    return [
+        MonthlyCommitCount(yearMonth=k, count=v)
         for k, v in sorted(counter.items())
     ]
