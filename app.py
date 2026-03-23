@@ -3,8 +3,14 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timedelta
 from collections import Counter
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = FastAPI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 #  Request DTO 
 class CommitItem(BaseModel):
@@ -22,6 +28,11 @@ class CommitSummaryResponse(BaseModel):
     latest: Optional[datetime]
     weekly: int
     mostActiveDay: Optional[str]
+
+# ai DTO
+class AiSummaryRequest(BaseModel):
+    projectId: int
+    messages:List[str]
 
 # 커밋 통계
 @app.post("/analyze/summary", response_model=CommitSummaryResponse)
@@ -106,3 +117,31 @@ def analyze_history(req: HistoryAnalyzeRequest):
         MonthlyCommitCount(yearMonth=k, count=v)
         for k, v in sorted(counter.items())
     ]
+
+# ai
+@app.post("/analyze/ai-summary")
+def analyze_ai_summary(req: AiSummaryRequest):
+    if not req.messages :
+         return {"summary" : "커밋 기반 데이터가 없습니다."}
+     
+    prompt = f"""
+    다음 커밋 메시지를 기반으로 개발 활동을 요약해줘.
+
+    {req.messages}
+    형식 : 
+    - 주요 작업
+    - 주요 키워드 
+    - 개발 특징
+    """
+
+    response = client.chat.completions.create(
+        model= "gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": "너는 개발 활동을 요약하는 AI야."},
+            {"role": "user", "content": prompt} 
+        ]
+    )
+
+    return {
+        "summary" : response.choices[0].message.content
+    }
