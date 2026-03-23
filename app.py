@@ -33,6 +33,7 @@ class CommitSummaryResponse(BaseModel):
 class AiSummaryRequest(BaseModel):
     projectId: int
     messages:List[str]
+    projectDescription: Optional[str] = None
 
 # 커밋 통계
 @app.post("/analyze/summary", response_model=CommitSummaryResponse)
@@ -144,4 +145,36 @@ def analyze_ai_summary(req: AiSummaryRequest):
 
     return {
         "summary" : response.choices[0].message.content
+    }
+
+# 프로젝트 소개 생성
+@app.post("/analyze/project-intro")
+def analyze_project_intro(req: AiSummaryRequest):
+    if not req.messages:
+        return {"intro" : "프로젝트 데이터가 없습니다."}
+    
+    prompt = f"""
+    프로젝트 설명:
+    {req.projectDescription if req.projectDescription else "커밋 데이터를 기반으로 프로젝트를 유추"}
+     
+        다음 커밋 메시지를 참고해서 프로젝트를 소개하는 글을 작성해줘.
+
+    {"\n".join(req.messages)}
+    조건 : 
+    - 프로젝트의 핵심 목적 중심으로 설명
+    - 부가 기능은 보조적으로 표현
+    - 주요 기능 2~3개 포함
+    - 기술적인 특징 포함
+    - 3~5줄 자연스럽게 작성
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+             {"role": "system", "content": "너는 소프트웨어 프로젝트의 핵심 목적을 중심으로 소개 글을 작성하는 AI야."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return{
+        "intro" : response.choices[0].message.content
     }
